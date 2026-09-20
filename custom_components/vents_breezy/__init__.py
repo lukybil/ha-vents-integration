@@ -5,7 +5,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from homeassistant.components.frontend import add_extra_js_url
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, Platform
@@ -14,6 +13,7 @@ from homeassistant.core import HomeAssistant
 from .client import BreezyClient
 from .const import CARD_URL, CARD_VERSION, DEFAULT_PASSWORD
 from .coordinator import VentsBreezyCoordinator
+from .frontend_registration import async_register_card
 
 PLATFORMS: list[Platform] = [
     Platform.BINARY_SENSOR,
@@ -41,7 +41,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     await hass.http.async_register_static_paths(
         [StaticPathConfig(CARD_URL, str(card_path), False)]
     )
-    add_extra_js_url(hass, f"{CARD_URL}?v={CARD_VERSION}")
+    await async_register_card(hass, f"{CARD_URL}?v={CARD_VERSION}")
     return True
 
 

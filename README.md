@@ -49,6 +49,11 @@ entity: fan.vents_breezy_160_e
 The visual editor also allows each related entity to be overridden, which is
 useful if entities were moved between devices or deliberately replaced.
 
+After installing or updating the integration, restart Home Assistant and then
+hard-refresh the browser or reload the companion app. The card is registered as
+a versioned Lovelace module in storage resource mode. Installations using YAML
+resources load it through Home Assistant's frontend injection mechanism.
+
 ## Requirements
 
 - Home Assistant 2026.3 or newer
