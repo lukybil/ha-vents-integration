@@ -1,15 +1,14 @@
 {
   "domain": "vents_breezy",
   "name": "VENTS Breezy",
-  "codeowners": ["@lukyb"],
+  "codeowners": ["@lukybil"],
   "config_flow": true,
   "dependencies": [],
-  "documentation": "https://github.com/lukyb/ha-vents-integration",
+  "documentation": "https://github.com/lukybil/ha-vents-integration",
   "integration_type": "device",
   "iot_class": "local_polling",
-  "issue_tracker": "https://github.com/lukyb/ha-vents-integration/issues",
+  "issue_tracker": "https://github.com/lukybil/ha-vents-integration/issues",
   "loggers": ["ecoventv2"],
   "requirements": ["pyEcoventV2==0.9.26"],
   "version": "0.1.0"
 }
-
