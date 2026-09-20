@@ -26,6 +26,29 @@ device families.
 The unit's humidity reading is also exposed as a sensor. Arbitrary speed
 percentages use the device's manual-speed mode.
 
+## Dashboard card
+
+The integration includes a **VENTS Breezy Remote** dashboard card and loads it
+automatically; no separate frontend install or dashboard resource is needed.
+Add it from the dashboard card picker, select the Breezy fan entity, and the
+card discovers the airflow, heater, humidity, filter, and filter-reset entities
+on the same device.
+
+The Night, Manual, and Turbo controls are presented as one mutually exclusive
+air-intensity control. Moving the speed slider exits Night or Turbo and applies
+the selected manual speed. Airflow modes use a four-way control, and filter
+reset requires confirmation to avoid accidental resets.
+
+Minimal YAML configuration:
+
+```yaml
+type: custom:vents-breezy-card
+entity: fan.vents_breezy_160_e
+```
+
+The visual editor also allows each related entity to be overridden, which is
+useful if entities were moved between devices or deliberately replaced.
+
 ## Requirements
 
 - Home Assistant 2026.3 or newer
