@@ -1,0 +1,3 @@
+pyEcoventV2==0.9.26
+pytest>=8.0
+ruff>=0.14

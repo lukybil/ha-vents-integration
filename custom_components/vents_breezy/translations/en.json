@@ -1,0 +1,76 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to VENTS Breezy",
+        "description": "Enter the local address of the fan. Give the fan a fixed DHCP lease before continuing.",
+        "data": {
+          "host": "Host or IP address",
+          "password": "Device password"
+        },
+        "data_description": {
+          "host": "Local network address of the Breezy unit.",
+          "password": "The device password; the factory default is 1111."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Unable to connect. Check the address, password, and local network access."
+    },
+    "abort": {
+      "already_configured": "This Breezy unit is already configured."
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "filter": {
+        "name": "Filter"
+      }
+    },
+    "button": {
+      "reset_filter": {
+        "name": "Reset filter timer"
+      }
+    },
+    "fan": {
+      "breezy": {
+        "name": null,
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "night": "Night",
+              "turbo": "Turbo"
+            }
+          }
+        }
+      }
+    },
+    "select": {
+      "airflow_mode": {
+        "name": "Airflow mode",
+        "state": {
+          "ventilation": "Ventilation",
+          "heat_recovery": "Heat recovery",
+          "air_supply": "Air supply",
+          "extract": "Extract"
+        }
+      }
+    },
+    "sensor": {
+      "humidity": {
+        "name": "Humidity"
+      }
+    },
+    "switch": {
+      "heater": {
+        "name": "Heater"
+      }
+    }
+  },
+  "exceptions": {
+    "command_failed": {
+      "message": "The Breezy unit did not confirm the command."
+    }
+  }
+}
+
