@@ -34,7 +34,6 @@
     },
     "fan": {
       "breezy": {
-        "name": null,
         "state_attributes": {
           "preset_mode": {
             "state": {
@@ -73,4 +72,3 @@
     }
   }
 }
-

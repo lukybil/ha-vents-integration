@@ -35,6 +35,13 @@ percentages use the device's manual-speed mode.
 
 ## Install with HACS
 
+HACS requires a public repository. While this repository is private, use the
+manual installation below. CI skips HACS validation for private repositories;
+Hassfest and the Python checks still run. If the repository is made public,
+HACS validation runs automatically. Before then, set a repository description
+and relevant topics such as `vents`, `breezy`, and `ventilation` in GitHub's
+**About** settings.
+
 1. Open HACS and choose **Integrations**.
 2. Open the menu, choose **Custom repositories**, and add this repository as an
    **Integration**.
@@ -81,4 +88,3 @@ python -m pytest
 
 MIT. `pyEcoventV2` is a separate MIT-licensed dependency maintained by its
 authors.
-

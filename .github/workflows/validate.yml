@@ -24,6 +24,8 @@ jobs:
       - run: python -m pytest -q
 
   hacs:
+    # HACS downloads manifests from raw GitHub URLs and requires a public repo.
+    if: ${{ !github.event.repository.private }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
