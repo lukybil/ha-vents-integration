@@ -50,10 +50,24 @@ The visual editor also allows each related entity to be overridden, which is
 useful if entities were moved between devices or deliberately replaced.
 
 After installing or updating the integration, restart Home Assistant. The card
-is registered as a versioned frontend module after its HTTP route is available,
-including in already-open dashboards. Version 0.2.2 also removes the legacy
-stored Lovelace resource created by version 0.2.1, which could be loaded too
-early during startup.
+is registered both as a versioned frontend module and as a persistent dashboard
+resource, after its HTTP route is available. Version 0.2.3 restores resources
+removed by 0.2.2, updates old URLs and incorrect resource types, and removes
+duplicate entries. Reload open dashboards after the restart; an already-loaded
+page does not reliably receive newly registered frontend modules.
+
+If you manage **Lovelace resources in YAML**, add the resource explicitly so
+dashboard loading does not depend on the initial frontend HTML:
+
+```yaml
+lovelace:
+  resources:
+    - url: /vents_breezy/vents-breezy-card.js?v=0.2.3
+      type: module
+```
+
+Merge this into your existing `lovelace:` section. A YAML dashboard can still
+use UI-managed resources; this step is only for YAML-managed resource lists.
 
 ## Requirements
 
@@ -102,6 +116,15 @@ can reach the fan's subnet, UDP port 4000 is not blocked, and the password is
 correct. Download integration diagnostics from the device page when reporting
 an issue; passwords are redacted.
 
+For `Custom element doesn't exist: vents-breezy-card`, check **Settings >
+Dashboards > Resources** (enable advanced mode in your profile if needed).
+There should be one `/vents_breezy/vents-breezy-card.js?v=0.2.3` entry of type
+**JavaScript module**. It is created automatically for UI-managed resources.
+If the error persists after a restart and page reload, inspect the browser's
+Network and Console tabs for this URL: record its HTTP status and any JavaScript
+error. A missing request points to resource registration; a failed request or
+HTML response points to serving/proxy problems.
+
 ## Development
 
 The integration uses a `DataUpdateCoordinator`, config-entry runtime data,
@@ -111,6 +134,7 @@ synchronous upstream library. Run the lightweight checks with:
 ```bash
 python -m compileall custom_components
 python -m pytest
+node --experimental-vm-modules --test tests/frontend.test.mjs
 ```
 
 ## License
