@@ -3,17 +3,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import Path
 
-from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, Platform
 from homeassistant.core import HomeAssistant
 
 from .client import BreezyClient
-from .const import CARD_URL, CARD_VERSION, DEFAULT_PASSWORD
+from .const import DEFAULT_PASSWORD
 from .coordinator import VentsBreezyCoordinator
-from .frontend_registration import async_register_card
 
 PLATFORMS: list[Platform] = [
     Platform.BINARY_SENSOR,
@@ -33,16 +30,6 @@ class VentsBreezyRuntimeData:
 
 
 type VentsBreezyConfigEntry = ConfigEntry[VentsBreezyRuntimeData]
-
-
-async def async_setup(hass: HomeAssistant, config: dict) -> bool:
-    """Register the dashboard card bundled with the integration."""
-    card_path = Path(__file__).parent / "frontend" / "vents-breezy-card.js"
-    await hass.http.async_register_static_paths(
-        [StaticPathConfig(CARD_URL, str(card_path), False)]
-    )
-    await async_register_card(hass, f"{CARD_URL}?v={CARD_VERSION}")
-    return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: VentsBreezyConfigEntry) -> bool:

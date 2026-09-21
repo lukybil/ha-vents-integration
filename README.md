@@ -28,11 +28,23 @@ percentages use the device's manual-speed mode.
 
 ## Dashboard card
 
-The integration includes a **VENTS Breezy Remote** dashboard card and loads it
-automatically; no separate frontend install or dashboard resource is needed.
-Add it from the dashboard card picker, select the Breezy fan entity, and the
-card discovers the airflow, heater, humidity, filter, and filter-reset entities
-on the same device.
+The optional **VENTS Breezy Remote** dashboard card is distributed as the
+standalone [`www/vents-breezy-card.js`](www/vents-breezy-card.js) file. It is
+not bundled, served, or registered by the integration.
+
+To install it manually:
+
+1. Copy `www/vents-breezy-card.js` from this repository to
+   `/config/www/vents-breezy-card.js` in Home Assistant. Create the `www`
+   directory if it does not exist.
+2. In Home Assistant, open **Settings > Dashboards > Resources**, choose
+   **Add resource**, enter `/local/vents-breezy-card.js`, and select
+   **JavaScript module**.
+3. Reload the browser, add **VENTS Breezy Remote** from the card picker, and
+   select the Breezy fan entity.
+
+The card discovers the airflow, heater, humidity, filter, and filter-reset
+entities on the same device.
 
 The Night, Manual, and Turbo controls are presented as one mutually exclusive
 air-intensity control. Moving the speed slider exits Night or Turbo and applies
@@ -49,25 +61,20 @@ entity: fan.vents_breezy_160_e
 The visual editor also allows each related entity to be overridden, which is
 useful if entities were moved between devices or deliberately replaced.
 
-After installing or updating the integration, restart Home Assistant. The card
-is registered both as a versioned frontend module and as a persistent dashboard
-resource, after its HTTP route is available. Version 0.2.3 restores resources
-removed by 0.2.2, updates old URLs and incorrect resource types, and removes
-duplicate entries. Reload open dashboards after the restart; an already-loaded
-page does not reliably receive newly registered frontend modules.
-
-If you manage **Lovelace resources in YAML**, add the resource explicitly so
-dashboard loading does not depend on the initial frontend HTML:
+If you manage Lovelace resources in YAML, register the copied file there
+instead:
 
 ```yaml
 lovelace:
   resources:
-    - url: /vents_breezy/vents-breezy-card.js?v=0.2.3
+    - url: /local/vents-breezy-card.js
       type: module
 ```
 
-Merge this into your existing `lovelace:` section. A YAML dashboard can still
-use UI-managed resources; this step is only for YAML-managed resource lists.
+When upgrading from a release that bundled the card, remove the old
+`/vents_breezy/vents-breezy-card.js?...` resource from **Settings > Dashboards >
+Resources**. That URL is no longer provided by the integration. Remove it from
+YAML instead if your resources are YAML-managed.
 
 ## Requirements
 
@@ -116,14 +123,12 @@ can reach the fan's subnet, UDP port 4000 is not blocked, and the password is
 correct. Download integration diagnostics from the device page when reporting
 an issue; passwords are redacted.
 
-For `Custom element doesn't exist: vents-breezy-card`, check **Settings >
-Dashboards > Resources** (enable advanced mode in your profile if needed).
-There should be one `/vents_breezy/vents-breezy-card.js?v=0.2.3` entry of type
-**JavaScript module**. It is created automatically for UI-managed resources.
-If the error persists after a restart and page reload, inspect the browser's
-Network and Console tabs for this URL: record its HTTP status and any JavaScript
-error. A missing request points to resource registration; a failed request or
-HTML response points to serving/proxy problems.
+For `Custom element doesn't exist: vents-breezy-card`, confirm that
+`/config/www/vents-breezy-card.js` exists and that **Settings > Dashboards >
+Resources** contains exactly one `/local/vents-breezy-card.js` entry of type
+**JavaScript module**. Reload the browser after adding or replacing the file.
+If the error persists, inspect that URL in the browser's Network and Console
+tabs for its HTTP status and any JavaScript error.
 
 ## Development
 

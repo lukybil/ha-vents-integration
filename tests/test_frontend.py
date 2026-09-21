@@ -1,23 +1,22 @@
-"""Packaging checks for the bundled dashboard card."""
+"""Packaging checks for the optional standalone dashboard card."""
 
 import json
-import re
 from pathlib import Path
 
 
-def test_frontend_bundle_is_packaged_and_versioned() -> None:
-    """The resource URL, manifest, and browser bundle use one version."""
-    integration_dir = (
-        Path(__file__).parents[1] / "custom_components" / "vents_breezy"
-    )
+def test_frontend_card_is_standalone() -> None:
+    """The card remains usable but is not packaged inside the integration."""
+    root = Path(__file__).parents[1]
+    integration_dir = root / "custom_components" / "vents_breezy"
     manifest = json.loads((integration_dir / "manifest.json").read_text())
+    init = (integration_dir / "__init__.py").read_text()
     constants = (integration_dir / "const.py").read_text()
-    card = (integration_dir / "frontend" / "vents-breezy-card.js").read_text()
+    card = (root / "www" / "vents-breezy-card.js").read_text()
 
-    version_match = re.search(r'^CARD_VERSION = "([^"]+)"$', constants, re.MULTILINE)
-
-    assert version_match is not None
-    assert version_match.group(1) == manifest["version"]
-    assert f" {manifest['version']} " in card
-    assert {"frontend", "http", "lovelace"} <= set(manifest["dependencies"])
+    assert not (integration_dir / "frontend").exists()
+    assert not (integration_dir / "frontend_registration.py").exists()
+    assert not {"frontend", "http", "lovelace"} & set(manifest["dependencies"])
+    assert "CARD_URL" not in constants
+    assert "StaticPathConfig" not in init
+    assert "async_register_card" not in init
     assert "customElements.define(CARD_NAME, VentsBreezyCard)" in card
