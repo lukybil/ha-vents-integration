@@ -21,3 +21,22 @@ def test_frontend_bundle_is_packaged_and_versioned() -> None:
     assert f" {manifest['version']} " in card
     assert {"frontend", "http", "lovelace"} <= set(manifest["dependencies"])
     assert "customElements.define(CARD_NAME, VentsBreezyCard)" in card
+
+
+def test_frontend_registration_avoids_the_startup_race() -> None:
+    """The live module is registered before a legacy resource is inspected."""
+    integration_dir = (
+        Path(__file__).parents[1] / "custom_components" / "vents_breezy"
+    )
+    registration = (integration_dir / "frontend_registration.py").read_text()
+
+    live_registration = "add_extra_js_url(hass, card_url)"
+    legacy_resource_load = "await resources.async_get_info()"
+
+    assert live_registration in registration
+    assert legacy_resource_load in registration
+    assert registration.index(live_registration) < registration.index(
+        legacy_resource_load
+    )
+    assert 'await resources.async_delete_item(item["id"])' in registration
+    assert "async_create_item" not in registration

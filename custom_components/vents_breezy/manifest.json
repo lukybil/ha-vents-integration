@@ -10,5 +10,5 @@
   "issue_tracker": "https://github.com/lukybil/ha-vents-integration/issues",
   "loggers": ["ecoventv2"],
   "requirements": ["pyEcoventV2==0.9.26"],
-  "version": "0.2.1"
+  "version": "0.2.2"
 }

@@ -5,7 +5,7 @@ from datetime import timedelta
 DOMAIN = "vents_breezy"
 
 CARD_URL = "/vents_breezy/vents-breezy-card.js"
-CARD_VERSION = "0.2.1"
+CARD_VERSION = "0.2.2"
 
 DEFAULT_NAME = "VENTS Breezy 160-E"
 DEFAULT_PASSWORD = "1111"

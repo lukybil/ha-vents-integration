@@ -371,4 +371,4 @@ if (!window.customCards.some((card) => card.type === CARD_NAME)) {
   });
 }
 
-console.info("%c VENTS BREEZY CARD %c 0.2.1 ", "color:white;background:#039be5;font-weight:700", "color:#039be5;background:#e1f5fe");
+console.info("%c VENTS BREEZY CARD %c 0.2.2 ", "color:white;background:#039be5;font-weight:700", "color:#039be5;background:#e1f5fe");
