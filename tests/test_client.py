@@ -4,6 +4,8 @@ import sys
 from pathlib import Path
 from types import ModuleType
 
+import pytest
+
 # Keep these protocol tests lightweight: load the integration package as a
 # namespace so importing client.py does not require a full Home Assistant test
 # environment.
@@ -81,3 +83,84 @@ def test_manual_speed_encoding() -> None:
     client = BreezyClient("192.0.2.1")
     client.man_speed = "32"
     assert client.man_speed == 50
+
+
+@pytest.mark.parametrize("brightness", [1, 50, 100])
+def test_panel_snapshot(brightness) -> None:
+    """Panel values decode independently of fan power."""
+    client = BreezyClient("192.0.2.1")
+    client.state = "00"
+    client.panel_brightness = f"{brightness:02x}"
+    client.panel_backlight_mode = "01"
+    client.panel_display = "02"
+    state = client.snapshot()
+    assert state.panel_brightness == brightness
+    assert state.panel_backlight_mode == "manual"
+    assert state.panel_display == "off_interval"
+    assert state.is_on is False
+
+
+def test_invalid_panel_values_are_unknown() -> None:
+    """Out-of-range values never become usable control state."""
+    client = BreezyClient("192.0.2.1")
+    for value in ("00", "65", "ff"):
+        client.panel_brightness = value
+        assert client.snapshot().panel_brightness is None
+    client.panel_backlight_mode = "02"  # Toggle is a command, not a mode.
+    client.panel_display = "ff"
+    assert client.snapshot().panel_backlight_mode is None
+    assert client.snapshot().panel_display is None
+
+
+def test_panel_protocol_frames(monkeypatch) -> None:
+    """The real upstream encoder and parser handle each high-page panel row."""
+    client = BreezyClient("192.0.2.1")
+    calls = []
+    responses = iter(["ff040032", "ff040201", "ff040702"])
+    monkeypatch.setattr(client, "send", calls.append)
+
+    def receive():
+        # Header, protocol, 16-byte device ID, empty password, response function.
+        return bytes.fromhex("fdfd0210" + "30" * 16 + "0006" + next(responses) + "0000")
+
+    monkeypatch.setattr(client, "receive", receive)
+    client.write_many(
+        [
+            ("panel_brightness", "32"),
+            ("panel_backlight_mode", "manual"),
+            ("panel_display", "off_interval"),
+        ]
+    )
+
+    assert calls == ["03ff040032", "03ff040201", "03ff040702"]
+    assert client.snapshot().panel_brightness == 50
+    assert client.snapshot().panel_backlight_mode == "manual"
+    assert client.snapshot().panel_display == "off_interval"
+
+
+def test_optional_panel_reads_do_not_break_fan_poll(monkeypatch) -> None:
+    """Failed or omitted optional data clears stale panel state only."""
+    client = BreezyClient("192.0.2.1")
+    client.panel_brightness = "32"
+    client.panel_backlight_mode = "01"
+    client.panel_display = "01"
+    calls = []
+
+    def read(function, parameter, value=""):
+        calls.append(parameter)
+        if parameter == client._POLL_PARAMETERS:
+            client.state = "01"
+            client.speed = "02"
+            return True
+        if parameter == "0407":
+            client.panel_display = "00"
+        return parameter != "0400"
+
+    monkeypatch.setattr(client, "do_func", read)
+    state = client.update_state()
+    assert state.is_on is True
+    assert state.percentage == 67
+    assert state.panel_brightness is None
+    assert state.panel_backlight_mode is None
+    assert state.panel_display == "off"
+    assert calls == [client._POLL_PARAMETERS, "0400", "0402", "0407"]

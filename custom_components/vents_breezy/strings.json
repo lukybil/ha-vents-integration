@@ -44,7 +44,27 @@
         }
       }
     },
+    "number": {
+      "panel_brightness": {
+        "name": "LED panel brightness"
+      }
+    },
     "select": {
+      "panel_backlight_mode": {
+        "name": "LED panel backlight mode",
+        "state": {
+          "auto": "Auto",
+          "manual": "Manual"
+        }
+      },
+      "panel_display": {
+        "name": "LED panel display",
+        "state": {
+          "off": "Off",
+          "on": "On",
+          "off_interval": "Scheduled"
+        }
+      },
       "airflow_mode": {
         "name": "Airflow mode",
         "state": {

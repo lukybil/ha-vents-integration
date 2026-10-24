@@ -20,6 +20,7 @@ device families.
 | Turbo | `turbo` fan preset |
 | Airflow buttons | Airflow mode select: ventilation, heat recovery, air supply, extract |
 | Heater | Heater switch |
+| LED panel | Brightness number (1–100%), Auto/Manual backlight select, On/Off/Scheduled display select |
 | Filter | Filter problem sensor and reset-filter button |
 | Wi-Fi | Deliberately not exposed; Wi-Fi remains the always-on transport |
 
@@ -43,13 +44,36 @@ To install it manually:
 3. Reload the browser, add **VENTS Breezy Remote** from the card picker, and
    select the Breezy fan entity.
 
-The card discovers the airflow, heater, humidity, filter, and filter-reset
+The card discovers the airflow, heater, LED panel, humidity, filter, and filter-reset
 entities on the same device.
 
 The Night, Manual, and Turbo controls are presented as one mutually exclusive
 air-intensity control. Moving the speed slider exits Night or Turbo and applies
 the selected manual speed. Airflow modes use a four-way control, and filter
 reset requires confirmation to avoid accidental resets.
+
+The LED panel section has a brightness slider, Auto/Manual backlighting, and
+On/Off/Scheduled display controls. Changing brightness selects manual
+backlighting without changing fan power, speed, or the display schedule. Choose
+**On** if the display is off and you want to see the new brightness immediately.
+**Auto** restores light-sensor control; the slider shows the saved manual
+brightness, not the current sensor-adjusted brightness. **Scheduled** uses the
+screen-off interval already configured in the VENTS app.
+
+The related entity overrides are `panel_brightness` (number),
+`panel_backlight_mode` (select), and `panel_display` (select). Missing controls
+are hidden; unknown or unavailable panel states disable their controls. Panel
+registers are polled separately so unsupported panel settings do not prevent
+normal fan control.
+
+Panel controls use registers `0x0400`, `0x0402`, and `0x0407` from the
+[Breezy Smart Home protocol](https://ventilation-system.com/download/breezy-manual-21433.pdf),
+also mapped in the
+[upstream protocol implementation](https://github.com/gody01/ecovent_v2/blob/main/custom_components/ecovent_v2/protocol_maps.py).
+
+After updating, restart Home Assistant to load the new entities, replace the
+standalone card file in `/config/www`, and reload the browser. If the old card
+is cached, change the resource URL to `/local/vents-breezy-card.js?v=panel`.
 
 Minimal YAML configuration:
 

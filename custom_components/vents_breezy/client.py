@@ -29,6 +29,9 @@ class BreezyState:
     serial: str
     model: str
     firmware: str | None
+    panel_brightness: int | None = None
+    panel_backlight_mode: str | None = None
+    panel_display: str | None = None
 
 
 class BreezyClient(Fan):
@@ -51,6 +54,8 @@ class BreezyClient(Fan):
         3: "extract",
     }
     unit_types: Final = {0x1100: "VENTS Breezy 160-E"}
+    panel_backlight_modes: Final = {0: "auto", 1: "manual"}
+    panel_display_modes: Final = {0: "off", 1: "on", 2: "off_interval"}
 
     # Keep the map deliberately small. The upstream library polls a broad VENTS
     # register set by default; some Breezy firmware rejects unrelated registers.
@@ -68,6 +73,9 @@ class BreezyClient(Fan):
         0x0088: ["filter_replacement_status", statuses],
         0x00B7: ["airflow", airflows],
         0x00B9: ["unit_type", unit_types],
+        0x0400: ["panel_brightness", None],
+        0x0402: ["panel_backlight_mode", panel_backlight_modes],
+        0x0407: ["panel_display", panel_display_modes],
     }
 
     _POLL_PARAMETERS: Final = "0001000200070025004400640068007c0086008800b700b9"
@@ -84,6 +92,9 @@ class BreezyClient(Fan):
         super().__init__(host, password=password, name=name, port=port)
         self._heater_state: str | None = None
         self._man_speed: int | None = None
+        self._panel_brightness: int | None = None
+        self._panel_backlight_mode: str | None = None
+        self._panel_display: str | None = None
 
     def initialize(self) -> BreezyState:
         """Discover the controller ID and perform the first poll."""
@@ -108,6 +119,13 @@ class BreezyClient(Fan):
         """Poll only registers used by this integration."""
         if not self.do_func(self.func["read"], self._POLL_PARAMETERS):
             raise BreezyConnectionError("The fan did not answer the status request")
+        # Read high-page rows individually: pyEcoventV2 0.9.26 resets the page
+        # after each response value. Unsupported panel rows must not break the fan.
+        for parameter in ("panel_brightness", "panel_backlight_mode", "panel_display"):
+            setattr(self, f"_{parameter}", None)
+            index = self.get_params_index(parameter)
+            if not self.do_func(self.func["read"], f"{index:04x}"):
+                setattr(self, f"_{parameter}", None)
         return self.snapshot()
 
     def write(self, parameter: str, value: str) -> None:
@@ -132,6 +150,34 @@ class BreezyClient(Fan):
         """Apply a short sequence of commands."""
         for parameter, value in commands:
             self.write(parameter, value)
+
+    @property
+    def panel_brightness(self) -> int | None:
+        """Return the manual panel brightness percentage."""
+        return self._panel_brightness
+
+    @panel_brightness.setter
+    def panel_brightness(self, value: str) -> None:
+        brightness = int(value, 16)
+        self._panel_brightness = brightness if 1 <= brightness <= 100 else None
+
+    @property
+    def panel_backlight_mode(self) -> str | None:
+        """Return whether backlighting follows the light sensor or a manual level."""
+        return self._panel_backlight_mode
+
+    @panel_backlight_mode.setter
+    def panel_backlight_mode(self, value: str) -> None:
+        self._panel_backlight_mode = self.panel_backlight_modes.get(int(value, 16))
+
+    @property
+    def panel_display(self) -> str | None:
+        """Return the screen display setting, including its configured schedule."""
+        return self._panel_display
+
+    @panel_display.setter
+    def panel_display(self, value: str) -> None:
+        self._panel_display = self.panel_display_modes.get(int(value, 16))
 
     @property
     def heater_state(self) -> str | None:
@@ -187,6 +233,9 @@ class BreezyClient(Fan):
             serial=self.id,
             model=self.unit_type or DEFAULT_NAME,
             firmware=self.firmware,
+            panel_brightness=self.panel_brightness,
+            panel_backlight_mode=self.panel_backlight_mode,
+            panel_display=self.panel_display,
         )
 
     @staticmethod

@@ -15,6 +15,9 @@ class VentsBreezyCard extends HTMLElement {
           schema: [
             { name: "airflow", selector: { entity: { domain: "select" } } },
             { name: "heater", selector: { entity: { domain: "switch" } } },
+            { name: "panel_brightness", selector: { entity: { domain: "number" } } },
+            { name: "panel_backlight_mode", selector: { entity: { domain: "select" } } },
+            { name: "panel_display", selector: { entity: { domain: "select" } } },
             { name: "humidity", selector: { entity: { domain: "sensor" } } },
             { name: "filter", selector: { entity: { domain: "binary_sensor" } } },
             { name: "reset_filter", selector: { entity: { domain: "button" } } },
@@ -26,6 +29,9 @@ class VentsBreezyCard extends HTMLElement {
         name: "Card title",
         airflow: "Airflow mode",
         heater: "Heater",
+        panel_brightness: "LED panel brightness",
+        panel_backlight_mode: "LED panel backlight mode",
+        panel_display: "LED panel display",
         humidity: "Humidity",
         filter: "Filter status",
         reset_filter: "Reset filter timer",
@@ -78,11 +84,11 @@ class VentsBreezyCard extends HTMLElement {
   }
 
   getCardSize() {
-    return 7;
+    return 11;
   }
 
   getGridOptions() {
-    return { rows: 7, columns: 6, min_rows: 6, min_columns: 3 };
+    return { rows: 11, columns: 6, min_rows: 6, min_columns: 3 };
   }
 
   async _discoverEntities() {
@@ -95,14 +101,17 @@ class VentsBreezyCard extends HTMLElement {
       const siblings = registry.filter(
         (entry) => entry.device_id === fan.device_id && entry.platform === "vents_breezy"
       );
-      const find = (domain, suffix) => siblings.find((entry) =>
+      const find = (domain, suffix, fallback = true) => siblings.find((entry) =>
         entry.entity_id.startsWith(`${domain}.`) && entry.unique_id?.endsWith(suffix)
-      )?.entity_id || siblings.find((entry) => entry.entity_id.startsWith(`${domain}.`))?.entity_id;
+      )?.entity_id || (fallback ? siblings.find((entry) => entry.entity_id.startsWith(`${domain}.`))?.entity_id : undefined);
       const overrides = this._config.entities || {};
       this._entities = {
         fan: this._config.entity,
-        airflow: overrides.airflow || find("select", "_airflow"),
+        airflow: overrides.airflow || find("select", "_airflow", false),
         heater: overrides.heater || find("switch", "_heater"),
+        panel_brightness: overrides.panel_brightness || find("number", "_panel_brightness", false),
+        panel_backlight_mode: overrides.panel_backlight_mode || find("select", "_panel_backlight_mode", false),
+        panel_display: overrides.panel_display || find("select", "_panel_display", false),
         humidity: overrides.humidity || find("sensor", "_humidity"),
         filter: overrides.filter || find("binary_sensor", "_filter"),
         reset_filter: overrides.reset_filter || find("button", "_reset_filter"),
@@ -128,7 +137,7 @@ class VentsBreezyCard extends HTMLElement {
   }
 
   _render() {
-    if (!this.shadowRoot || !this._config) return;
+    if (!this.shadowRoot || !this._config || this._sliderActive) return;
     if (!this._hass) {
       this.shadowRoot.innerHTML = `<ha-card><div class="loading">Loading VENTS Breezy…</div></ha-card>`;
       return;
@@ -151,6 +160,11 @@ class VentsBreezyCard extends HTMLElement {
     const humidity = this._state("humidity");
     const filter = this._state("filter");
     const reset = this._state("reset_filter");
+    const brightness = this._state("panel_brightness");
+    const backlight = this._state("panel_backlight_mode");
+    const display = this._state("panel_display");
+    const brightnessValue = Number(brightness?.state);
+    const brightnessAvailable = brightness && Number.isFinite(brightnessValue) && brightnessValue >= 1 && brightnessValue <= 100;
     const filterWarning = filter?.state === "on";
     const busy = this._pending.size > 0;
 
@@ -167,7 +181,7 @@ class VentsBreezyCard extends HTMLElement {
         </div>
 
         <section class="intensity ${isOn ? "" : "muted"}">
-          <div class="section-label"><span>Air intensity</span><output>${this._sliderValue}%</output></div>
+          <div class="section-label"><span>Air intensity</span><output id="speed-value">${this._sliderValue}%</output></div>
           <div class="mode-group" role="group" aria-label="Air intensity mode">
             ${this._modeButton("night", "weather-night", "Night", mode, available)}
             ${this._modeButton("manual", "tune-variant", "Manual", mode, available)}
@@ -193,6 +207,25 @@ class VentsBreezyCard extends HTMLElement {
           </div>
         </section>` : ""}
 
+        ${brightness || backlight || display ? `<section class="panel">
+          <div class="section-label"><span>LED panel</span><output id="panel-brightness-value">${brightnessAvailable ? `${brightnessValue}%` : "Unavailable"}</output></div>
+          ${display ? `<div class="mode-group" role="group" aria-label="LED panel display">
+            ${this._panelButton("panel_display", "off", "monitor-off", "Off", display)}
+            ${this._panelButton("panel_display", "on", "monitor", "On", display)}
+            ${this._panelButton("panel_display", "off_interval", "clock-outline", "Scheduled", display)}
+          </div>` : ""}
+          ${brightness ? `<div class="slider-row">
+            ${icon("brightness-4")}
+            <input id="panel-brightness" type="range" min="1" max="100" step="1" value="${brightnessAvailable ? brightnessValue : 1}" aria-label="LED panel brightness" ${brightnessAvailable && !busy ? "" : "disabled"}>
+            ${icon("brightness-7")}
+          </div>` : ""}
+          ${backlight ? `<div class="mode-group backlight" role="group" aria-label="LED panel backlight mode">
+            ${this._panelButton("panel_backlight_mode", "auto", "brightness-auto", "Auto", backlight)}
+            ${this._panelButton("panel_backlight_mode", "manual", "tune-variant", "Manual", backlight)}
+          </div>` : ""}
+          ${brightness ? `<p class="panel-hint">Brightness changes use manual backlighting. Scheduled uses the times set in the VENTS app.</p>` : ""}
+        </section>` : ""}
+
         <div class="status-grid">
           ${heater ? `<button class="status ${heater.state === "on" ? "active warm" : ""}" data-action="heater" aria-pressed="${heater.state === "on"}">
             ${icon("heat-wave")}<span><b>Heater</b><small>${heater.state === "on" ? "On" : "Off"}</small></span>
@@ -214,10 +247,16 @@ class VentsBreezyCard extends HTMLElement {
     return `<button class="airflow ${state.state === value ? "active" : ""}" data-airflow="${value}" aria-pressed="${state.state === value}" ${disabled ? "disabled" : ""}>${icon(iconName)}<span>${label}</span></button>`;
   }
 
+  _panelButton(key, value, iconName, label, state) {
+    const available = state.state !== "unavailable" && state.state !== "unknown";
+    return `<button class="mode ${state.state === value ? "active" : ""}" data-panel="${key}" data-option="${value}" aria-pressed="${state.state === value}" ${available ? "" : "disabled"}>${icon(iconName)}<span>${label}</span></button>`;
+  }
+
   async _handleClick(event) {
     const button = event.composedPath().find((node) => node instanceof HTMLButtonElement);
     if (!button || button.disabled) return;
     if (button.dataset.moreInfo) return this._moreInfo(button.dataset.moreInfo);
+    if (button.dataset.panel) return this._call("panel", "select", "select_option", { option: button.dataset.option }, button.dataset.panel);
     if (button.dataset.speed) return this._call("speed", "fan", "set_percentage", { percentage: Number(button.dataset.speed) });
     if (button.dataset.mode) {
       if (button.dataset.mode === "manual") {
@@ -240,25 +279,28 @@ class VentsBreezyCard extends HTMLElement {
   }
 
   _handleSliderInput(event) {
-    if (event.target.id !== "speed") return;
+    const isPanel = event.target.id === "panel-brightness";
+    if (event.target.id !== "speed" && !isPanel) return;
     this._sliderActive = true;
-    this._sliderValue = Number(event.target.value);
-    const output = this.shadowRoot.querySelector("output");
-    if (output) output.textContent = `${this._sliderValue}%`;
+    if (!isPanel) this._sliderValue = Number(event.target.value);
+    const output = this.shadowRoot.querySelector(isPanel ? "#panel-brightness-value" : "#speed-value");
+    if (output) output.textContent = `${Number(event.target.value)}%`;
   }
 
   _handleSliderChange(event) {
-    if (event.target.id !== "speed") return;
+    const isPanel = event.target.id === "panel-brightness";
+    if (event.target.id !== "speed" && !isPanel) return;
     this._sliderActive = false;
+    if (isPanel) return this._call("panel", "number", "set_value", { value: Number(event.target.value) }, "panel_brightness");
     this._call("speed", "fan", "set_percentage", { percentage: Number(event.target.value) });
   }
 
   _handleKeydown(event) {
-    if (event.key === "Enter" && event.target.id === "speed") this._handleSliderChange(event);
+    if (event.key === "Enter") this._handleSliderChange(event);
   }
 
-  async _call(pendingKey, domain, service, data = {}) {
-    const key = domain === "fan" ? "fan" : domain === "select" ? "airflow" : domain === "switch" ? "heater" : "reset_filter";
+  async _call(pendingKey, domain, service, data = {}, entityKey) {
+    const key = entityKey || (domain === "fan" ? "fan" : domain === "select" ? "airflow" : domain === "switch" ? "heater" : "reset_filter");
     const entityId = this._entities[key];
     if (!entityId || this._pending.has(pendingKey)) return;
     this._pending.add(pendingKey);
@@ -317,6 +359,10 @@ class VentsBreezyCard extends HTMLElement {
       .mode { display: flex; min-height: 44px; align-items: center; justify-content: center; gap: 7px; border: 0; border-radius: 11px; background: transparent; cursor: pointer; font-size: 13px; font-weight: 600; }
       .mode ha-icon { font-size: 19px; }
       .mode.active { background: var(--card-background-color); color: var(--breezy-accent); box-shadow: 0 2px 8px rgba(0,0,0,.12); }
+      .backlight { grid-template-columns: repeat(2, 1fr); margin-top: 10px; }
+      .panel .mode { gap: 4px; padding: 6px 4px; font-size: 12px; }
+      .panel .mode ha-icon { --mdc-icon-size: 18px; width: 18px; height: 18px; }
+      .panel-hint { margin: 8px 0 0; color: var(--secondary-text-color); font-size: 11px; line-height: 1.4; }
       .slider-row { display: grid; grid-template-columns: 24px 1fr 24px; align-items: center; gap: 8px; margin-top: 13px; color: var(--secondary-text-color); }
       input[type=range] { width: 100%; accent-color: var(--breezy-accent); cursor: pointer; }
       .speed-marks { display: flex; justify-content: space-between; margin: 1px 25px 0; }

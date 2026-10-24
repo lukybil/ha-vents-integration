@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from homeassistant.components.select import SelectEntity
+from homeassistant.const import EntityCategory
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import VentsBreezyConfigEntry
@@ -18,8 +19,19 @@ async def async_setup_entry(
     entry: VentsBreezyConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    """Set up airflow selection."""
-    async_add_entities([VentsBreezyAirflowSelect(entry.runtime_data.coordinator)])
+    """Set up airflow and panel settings."""
+    coordinator = entry.runtime_data.coordinator
+    async_add_entities(
+        [
+            VentsBreezyAirflowSelect(coordinator),
+            VentsBreezyPanelSelect(
+                coordinator, "panel_backlight_mode", ["auto", "manual"]
+            ),
+            VentsBreezyPanelSelect(
+                coordinator, "panel_display", ["off", "on", "off_interval"]
+            ),
+        ]
+    )
 
 
 class VentsBreezyAirflowSelect(VentsBreezyEntity, SelectEntity):
@@ -45,3 +57,32 @@ class VentsBreezyAirflowSelect(VentsBreezyEntity, SelectEntity):
         if option not in self.options:
             raise ValueError(f"Unsupported airflow mode: {option}")
         await self.coordinator.async_write([("state", "on"), ("airflow", option)])
+
+
+class VentsBreezyPanelSelect(VentsBreezyEntity, SelectEntity):
+    """Select panel settings without changing ventilation."""
+
+    _attr_icon = "mdi:monitor"
+    _attr_entity_category = EntityCategory.CONFIG
+
+    def __init__(
+        self, coordinator: VentsBreezyCoordinator, parameter: str, options: list[str]
+    ) -> None:
+        """Initialize one panel setting."""
+        super().__init__(coordinator)
+        self._parameter = parameter
+        self._attr_translation_key = parameter
+        self._attr_unique_id = f"{coordinator.data.serial}_{parameter}"
+        self._attr_options = options
+
+    @property
+    def current_option(self) -> str | None:
+        """Return the current panel setting."""
+        value = getattr(self.coordinator.data, self._parameter)
+        return value if value in self.options else None
+
+    async def async_select_option(self, option: str) -> None:
+        """Apply a panel setting."""
+        if option not in self.options:
+            raise ValueError(f"Unsupported panel setting: {option}")
+        await self.coordinator.async_write([(self._parameter, option)])
